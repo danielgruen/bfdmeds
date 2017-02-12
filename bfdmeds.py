@@ -10,7 +10,6 @@ TODO: figure out at which point we determine which exposures to cull (because of
 
 import meds
 import numpy as np
-import scipy.stats
 import sys
 
 class BFDMEDS(meds.MEDS):
@@ -39,14 +38,14 @@ class BFDMEDS(meds.MEDS):
         super(BFDMEDS, self).__init__(filename)        
         
         if(filename_mofsub is not None):
-            self._meds_mofsub(filename_mofsub)
+            self._meds_mofsub = meds.MEDS(filename_mofsub)
             if(self._meds_mofsub.size!=self.size):
                 sys.exit("MOF subtracted and base meds file have different length. exiting.")
         else:
             self._meds_mofsub=None
         
         if(filename_mofsub_badfill is not None):
-            self._meds_mofsub_badfill(filename_mofsub_badfill)
+            self._meds_mofsub_badfill = meds.MEDS(filename_mofsub_badfill)
             if(self._meds_mofsub_badfill.size!=self.size):
                 sys.exit("MOF subtracted bad-pixel filled and base meds file have different length. exiting.")
         else:
@@ -215,7 +214,7 @@ class BFDMEDS(meds.MEDS):
         noise=[]
 
         for i in xrange(ncutout):
-            noise.append(1./np.sqrt(scipy.stats.hmean(wimgs[i][wimgs[i]>0],axis=None)))
+            noise.append(1./np.sqrt(np.median(wimgs[i][wimgs[i]>0],axis=None)))
 
         # TODO: deal with bad/masked pixels
 
