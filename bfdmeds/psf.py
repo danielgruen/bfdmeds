@@ -84,14 +84,14 @@ class PsfexSource(PsfSource):
         Otherwise open the named fits file, get the data from the named
         extension, and turn into a galsim.des.DES_PSFEx object.
         """
-        data = self.cache.get(hdu_name)
+        data = self.cache.get((fits_filename,hdu_name))
 
         if data is None:
             fitsfile = astropy.io.fits.open(fits_filename)
             hdu = fitsfile[hdu_name]
             data = galsim.des.DES_PSFEx(hdu)
 
-        self.cache[hdu_name] = data
+        self.cache[(fits_filename,hdu_name)] = data
 
         return data
 
