@@ -195,7 +195,9 @@ class BFDMEDS(meds.MEDS):
         A numpy array containing the PSF image.
         """
         info = self.get_exposure_info(iobj, icutout)
-        row, col = self.get_cutout_rowcol(iobj, icutout)
+        row = self['orig_row'][iobj][icutout]
+        col = self['orig_col'][iobj][icutout]
+
         stamp_size = self.get_cat()['box_size'][iobj]
         jacobian = None  # for now
 
