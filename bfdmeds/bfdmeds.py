@@ -150,7 +150,7 @@ class BFDMEDS(meds.MEDS):
         return rowlist, collist
 
 
-    def get_psf_list(self, psf_source, iobj, skip_coadd=False):
+    def get_psf_list(self, iobj, skip_coadd=False):
         """
         Get a list of PSF postage stamp images for all cutouts associated with this
         coadd object.
@@ -170,14 +170,12 @@ class BFDMEDS(meds.MEDS):
         A list of PSF postage stamps.
         """
 
-        if(skip_coadd==True):
-            return self.get_psf_list(iobj, False)[1:]
-            
         ncutout=self._cat['ncutout'][iobj]
+        if skip_coadd:
+            return [self.get_psf(iobj, i) for i in xrange(1,ncutout)]
+        else:
+            return [self.get_psf(iobj, i) for i in xrange(0,ncutout)]
 
-        psflist=[]
-        for i in xrange(ncutout):
-            psflist.append(self.get_psf(iobj, i)) # TODO: implement
 
 
     def get_psf(self, iobj, icutout):
