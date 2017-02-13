@@ -13,10 +13,10 @@ import astropy.io.fits
 class PsfSource(object):
     pass
 
-class MissingPSF(StandardError):
+class MissingPSFError(StandardError):
     pass
 
-class TooManyPsfs(StandardError):
+class TooManyPSFsError(StandardError):
     pass
 
 
@@ -104,7 +104,7 @@ class CollectedMedsPsfexSource(PsfexSource):
         pattern = "{0}_{1}_c{2}".format(exposure, band, ccd)
         if pattern in fitsfile:
             return fitsfile[pattern]
-        raise MissingPSF(pattern)
+        raise MissingPSFError(pattern)
 
 
 
@@ -126,9 +126,9 @@ class DirectoryPsfexSource(PsfexSource):
         pattern = "{0}/{1}_{2}_c{3}_*_psfexcat.psf".format(self.directory, exposure, band, ccd)
         files = glob.glob(pattern)
         if len(files)==0:
-            raise MissingPSF(pattern)
+            raise MissingPSFError(pattern)
         elif len(files)>1:
-            raise TooManyPsfs(pattern)
+            raise TooManyPSFsError(pattern)
         return files[0]
 
     def get_psf(self, tilename, band, exposure, ccd, col, row, stamp_size, jacobian):
