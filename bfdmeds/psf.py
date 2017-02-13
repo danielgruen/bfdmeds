@@ -185,10 +185,12 @@ class CollectedMedsPsfexSource(PsfexSource):
             A numpy stamp_size x stamp_size image of the PSF
 
         """
+
         fits_filename = self._get_psfex_filename(tilename, band)
         hdu_name = "{0}_{1}_c{2}".format(exposure, band, ccd)
         psf_data = self._get_psf_data(fits_filename, hdu_name)
-        psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size)
+        psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5))
+        # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
         return psf_image
 
 
@@ -249,10 +251,12 @@ class DirectoryPsfexSource(PsfexSource):
             A numpy stamp_size x stamp_size image of the PSF
 
         """
+        print("get_psf",tilename,band,exposure,ccd,row,col,stamp_size)
         fits_filename = self._get_psfex_filename(exposure, band, ccd)
         hdu_name = "PSF_DATA"
         psf_data = self._get_psf_data(fits_filename, hdu_name)
-        psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size)
+        psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
+        # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
         return psf_image
 
 
