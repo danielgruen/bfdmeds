@@ -11,11 +11,12 @@ TODO: figure out at which point we determine which exposures to cull (because of
 import meds
 import numpy as np
 import sys
+import collections
 
 class BFDMEDS(meds.MEDS):
 
 
-    def __init__(self, filename, filename_mofsub=None, filename_mofsub_badfill=None):
+    def __init__(self, filename, psf_source, filename_mofsub=None, filename_mofsub_badfill=None):
         """
         Build a BFDMEDS object from three MEDS files: the standard one, one with 
         MOF-neighbors subtracted, and one with MOF neighbors subtracted and bad pixels
@@ -28,6 +29,8 @@ class BFDMEDS(meds.MEDS):
         ----------
         filename:
             MEDS filename
+        psf_source:
+            An instance of bfdpsf.PsfSource
         filename_mofsub:
             MEDS filename, MOF neighbor models subtracted from all single epoch stamps
         fiename_mofsub_badfill:
@@ -37,6 +40,8 @@ class BFDMEDS(meds.MEDS):
     
         super(BFDMEDS, self).__init__(filename)        
         
+        self.psf_source = psf_source
+
         if(filename_mofsub is not None):
             self._meds_mofsub = meds.MEDS(filename_mofsub)
             if(self._meds_mofsub.size!=self.size):
@@ -144,7 +149,7 @@ class BFDMEDS(meds.MEDS):
         return rowlist, collist
 
 
-    def get_psf_list(self, iobj, skip_coadd=False):
+    def get_psf_list(self, psf_source, iobj, skip_coadd=False):
         """
         Get a list of PSF postage stamp images for all cutouts associated with this
         coadd object.
@@ -153,6 +158,8 @@ class BFDMEDS(meds.MEDS):
         ----------
         iobj:
             Index of the object
+        psf_source:
+
         skip_coadd:
             if True, remove the coadd PSF from the list (default: False)
 
@@ -170,6 +177,71 @@ class BFDMEDS(meds.MEDS):
         psflist=[]
         for i in xrange(ncutout):
             psflist.append(self.get_psf(iobj, i)) # TODO: implement
+
+
+    def get_psf(self, iobj, icutout):
+        """
+        Get a a PSF image for a single exposure.
+
+        parameters
+        ----------
+        iobj:
+            Index of the object
+        icutout:
+            Index of the exposure.  Zero for coadd.
+
+
+        returns
+        -------
+        A numpy array containing the PSF image.
+        """
+        info = self.get_exposure_info(iobj, icutout)
+        row, col = self.get_cutout_rowcol(iobj, icutout)
+        stamp_size = self.get_cat()['box_size'][iobj]
+        jacobian = None  # for now
+
+        return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], row, col, stamp_size, jacobian)
+
+    def get_exposure_info(self, iobj, icutout):
+        """
+        Get a selection of information about this exposure.
+
+        parameters
+        ----------
+        iobj:
+            Index of the object
+        icutout:
+            Index of the exposure.  Zero for coadd.
+
+
+        returns
+        -------
+        A numpy array containing the PSF image.
+        """
+        if icutout==0:
+            raise ValueError("MEDS.get_exposure_info requires icutout>0 (no information available for coadds)")
+
+        #Get the source info and thence image path
+        info = self.get_source_info(iobj, icutout)
+        image_path = info['image_path'] 
+        # image_paths have this format:
+        #"nwgint/DES2348-5831_r2590p01_D00350178_r_c03_nwgint.fits"
+        # we parse it into the pieces it encodes:
+        tile_part, request_attempt, exposure, band, ccd_part, _ = image_path.split("_")
+        
+        #Strip out the boilerplate
+        ccd = ccd_part.lstrip("c")
+        prefix = "nwgint/"
+        tilename = tile_part[len(prefix):]
+
+        #Return info as dictionary
+        info = dict(ccd=ccd, tilename=tilename, request_attempt=request_attempt, band=band, exposure=exposure)
+        return info
+
+
+
+
+
 
      
     def get_jacobian_list(self, iobj, skip_coadd=False):
