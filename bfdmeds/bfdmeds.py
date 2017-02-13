@@ -134,7 +134,8 @@ class BFDMEDS(meds.MEDS):
         """
                 
         if(skip_coadd==True):
-            return self.get_rowcol_list(iobj, False)[1:]
+            rows,cols = self.get_rowcol_list(iobj, False)
+            return rows[1:], cols[1:]
 
         rowlist=[]
         collist=[]
