@@ -21,8 +21,8 @@ detpos  =  {1:'S29' , 2:'S30', 3:'S31', 4 :'S25', 5 :'S26', 6 :'S27',
             55:'N24', 56:'N25', 57:'N26', 58:'N27', 59:'N28', 60:'N29',
             61:'N30', 62:'N31'}
 
-class UberMEDS(meds.MEDS):
-    def __init__(self, meds_file, astro_file):
+class AstroMEDS(meds.MEDS):
+    def __init__(self, meds_file, astro_file=None):
         """
         Create MEDS file wrapped by new astrometry.
 
@@ -31,10 +31,14 @@ class UberMEDS(meds.MEDS):
         meds_file:
             Filename for the MEDS catalog
         astro_file:
-            Filename of YAML-format astrometric solutions
+            Filename of YAML-format astrometric solutions.  None (default) to
+            keep using astrometry in the MEDS file
         """
-        super(UberMEDS, self).__init__(meds_file)
-        self.pmc = PixelMapCollection(astro_file)
+        super(AstroMEDS, self).__init__(meds_file)
+        if astro_file is None:
+            self.pmc = None
+        else:
+            self.pmc = PixelMapCollection(astro_file)
         self.color = 0.5 # ??? Nominal color given to all WCS's
         self.step = 5    # Step size (in pixels) used for Jacobian calcs
 
@@ -57,14 +61,13 @@ class UberMEDS(meds.MEDS):
     def _old_orig_rowcol(self,iobj,icutout):
         # MEDS will eventually have a get_orig_rowcol() method, but doesn't
         # yet.  When it does this is simply
-        # return super(UberMEDS,self).get_orig_rowcol(iobj,icutout)
+        # return super(AstroMEDS,self).get_orig_rowcol(iobj,icutout)
         return self['orig_row'][iobj][icutout], self['orig_col'][iobj][icutout]        
 
     def _old_cutout_rowcol(self,iobj,icutout):
         # Same thing for cutout rowcol
-        # yet.  When it does this is simply
-        # return super(uberMEDS,self).get_cutout_rowcol(iobj,icutout)
-        return self['cutout_row'][iobj][icutout], self['cutout_col'][iobj][icutout]
+        return super(uberMEDS,self).get_cutout_rowcol(iobj,icutout)
+        #return self['cutout_row'][iobj][icutout], self['cutout_col'][iobj][icutout]
     
     def get_orig_rowcol(self,iobj, icutout):
         """
@@ -114,15 +117,17 @@ class UberMEDS(meds.MEDS):
         -------
         row,col the location in the cutout image
         """
-        if icutout==0:
+        if icutout==0 or self.pmc is None:
             # Use old version for coadd cutout
-            return _old_cutout_rowcol(iobj,icutout)
+            return super(AstroMEDS,self).get_cutout_rowcol(iobj,icutout)
         # Subtract cutout corner from original coordinates to get cutout coords
         row,col = self.get_orig_rowcol(iobj, icutout)
         return row - self['orig_start_row'][iobj][icutout], \
                col - self['orig_start_col'][iobj][icutout]
 
     def get_coutout_rowcol_list(self,iobj):
+        if self.pmc is None:
+            return super(AstroMEDS,self).get_cutout_rowcol_list(iobj)
         ra,dec = self['ra'][iobj],self['dec'][iobj]
         posn = co.SkyCoord(ra, dec, unit='deg',frame='icrs')
         nstamps = self['ncutout'][iobj]
@@ -160,9 +165,9 @@ class UberMEDS(meds.MEDS):
         icutout:
             Index of the cutout for this object.
         """
-        if icutout==0:
+        if icutout==0 or self.pmc is None:
             # No change for coadd cutout:
-            return super(UberMEDS,self).get_jacobian(iobj,icutout)
+            return super(AstroMEDS,self).get_jacobian(iobj,icutout)
         
         # Get old position as guess at new one
         old_rowcol = self._old_orig_rowcol(iobj,icutout)
@@ -207,15 +212,17 @@ class UberMEDS(meds.MEDS):
             dudrow dudcol
             dvdrow dvdcol
         """
-        if icutout==0:
+        if icutout==0 or self.pmc is None:
             # No change for coadd cutout:
-            return super(UberMEDS,self).get_jacobian_matrix(iobj,icutout)
+            return super(AstroMEDS,self).get_jacobian_matrix(iobj,icutout)
         
         d = self.get_jacobian(iobj, icutout)
         return  np.array( [d['dudrow'], d['dudcol']],
                           [d['dvdrow'], d['dvdcol']] )
         
     def get_jacobian_list(self,iobj):
+        if self.pmc is None:
+            return super(AstroMEDS,self).get_jacobian_list(iobj)
         nstamps = self['ncutout'][iobj]
         return [self.get_jacobian(iobj,icutout) for icoutout in range(nstamps)]
     

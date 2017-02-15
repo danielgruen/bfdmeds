@@ -12,11 +12,12 @@ import meds
 import numpy as np
 import sys
 import collections
+from . import AstroMEDS
 
-class BFDMEDS(meds.MEDS):
+class BFDMEDS(AstroMEDS):
 
 
-    def __init__(self, filename, psf_source, filename_mofsub=None, filename_mofsub_badfill=None):
+    def __init__(self, filename, psf_source, astro_file=None, filename_mofsub=None, filename_mofsub_badfill=None):
         """
         Build a BFDMEDS object from three MEDS files: the standard one, one with 
         MOF-neighbors subtracted, and one with MOF neighbors subtracted and bad pixels
@@ -31,6 +32,8 @@ class BFDMEDS(meds.MEDS):
             MEDS filename
         psf_source:
             An instance of bfdpsf.PsfSource
+        astro_file:
+            Filename of serialized WCSFit astrometry, if any.  Default (None) is to use MEDS data.
         filename_mofsub:
             MEDS filename, MOF neighbor models subtracted from all single epoch stamps
         fiename_mofsub_badfill:
