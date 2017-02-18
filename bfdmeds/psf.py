@@ -251,7 +251,6 @@ class DirectoryPsfexSource(PsfexSource):
             A numpy stamp_size x stamp_size image of the PSF
 
         """
-        print("get_psf",tilename,band,exposure,ccd,row,col,stamp_size)
         fits_filename = self._get_psfex_filename(exposure, band, ccd)
         hdu_name = "PSF_DATA"
         psf_data = self._get_psf_data(fits_filename, hdu_name)
