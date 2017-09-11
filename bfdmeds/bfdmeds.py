@@ -231,12 +231,23 @@ class BFDMEDS(AstroMEDS):
         # image_paths have this format:
         #"nwgint/DES2348-5831_r2590p01_D00350178_r_c03_nwgint.fits"
         # we parse it into the pieces it encodes:
-        tile_part, request_attempt, exposure, band, ccd_part, _ = image_path.split("_")
-        
+        #tile_part, request_attempt, exposure, band, ccd_part, _ = image_path.split("_")
+
+        #Strip out the boilerplate
+        #ccd = ccd_part.lstrip("c")
+        #prefix = "nwgint/"
+        #tilename = tile_part[len(prefix):]
+
+        # image_paths have new format:
+        #"/nfs/slac/des/fs1/g/sims/esheldon/DESDATA//meds/y3v02/DES0000+0209/nullwt-r/D00251776_r_c43_r2365p01_immasked_nullwt.fits"
+        #parse into encoded pieces
+        tile_part_plus_exposure,band,ccd_part,request_attempt,not_important, not_important2 = image_path.split("_")
+        tilename=tile_part_plus_exposure.split("/")[12]
+        exposure=tile_part_plus_exposure.split("/")[-1]
+
         #Strip out the boilerplate
         ccd = ccd_part.lstrip("c")
-        prefix = "nwgint/"
-        tilename = tile_part[len(prefix):]
+
 
         #Return info as dictionary
         info = dict(ccd=ccd, tilename=tilename, request_attempt=request_attempt, band=band, exposure=exposure)
