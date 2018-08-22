@@ -290,9 +290,8 @@ class BFDMEDS(AstroMEDS):
         skip_coadd:
             if True, remove the coadd noise level from the list (default: False)
         """
-        
         if(skip_coadd==True):
-            return self.get_noise_list(iobj, False)[1:]
+            return self.get_noise_list(iobj,skip_coadd=False)[1:]
 
         ncutout=self._cat['ncutout'][iobj]
 
