@@ -17,7 +17,7 @@ from . import AstroMEDS
 class BFDMEDS(AstroMEDS):
 
 
-    def __init__(self, filename, psf_source, astro_file=None, filename_mofsub=None, filename_mofsub_badfill=None):
+    def __init__(self, filename, psf_source=None, astro_file=None, filename_mofsub=None, filename_mofsub_badfill=None):
         """
         Build a BFDMEDS object from three MEDS files: the standard one, one with 
         MOF-neighbors subtracted, and one with MOF neighbors subtracted and bad pixels
@@ -31,7 +31,7 @@ class BFDMEDS(AstroMEDS):
         filename:
             MEDS filename
         psf_source:
-            An instance of bfdpsf.PsfSource
+            An instance of bfdpsf.PsfSource, if any. Default (None) says to use psf supplied in MEDS file
         astro_file:
             Filename of serialized WCSFit astrometry, if any.  Default (None) is to use MEDS data.
         filename_mofsub:
@@ -112,6 +112,7 @@ class BFDMEDS(AstroMEDS):
                 sys.exit("requesting MOF subtracted bad-pixel filled stamp, which was not provided")
             return [a-b for a,b, in zip(super(BFDMEDS, self).get_cutout_list(iobj, 'image'),
                                         self._meds_mofsub_badfill.get_cutout_list(iobj, 'image'))]
+
                                         
         return super(BFDMEDS, self).get_cutout_list(iobj, type)
 
@@ -172,13 +173,19 @@ class BFDMEDS(AstroMEDS):
         -------
         A list of PSF postage stamps.
         """
-
-        ncutout=self._cat['ncutout'][iobj]
-        if skip_coadd:
-            return [self.get_psf(iobj, i) for i in xrange(1,ncutout)]
+        if self.psf_source is not None:
+            ncutout=self._cat['ncutout'][iobj]
+            if skip_coadd:
+                return [self.get_psf(iobj, i) for i in xrange(1,ncutout)]
+            else:
+                return [self.get_psf(iobj, i) for i in xrange(0,ncutout)]
         else:
-            return [self.get_psf(iobj, i) for i in xrange(0,ncutout)]
-
+            ncut=self['ncutout'][iobj]
+            psf_list=[super(BFDMEDS,self).get_psf(iobj,icut) for icut in xrange(ncut)]
+            if skip_coadd:
+                return psf_list[1:]
+            else:
+                return psf_list
 
 
     def get_psf(self, iobj, icutout):
@@ -203,8 +210,9 @@ class BFDMEDS(AstroMEDS):
 
         stamp_size = self.get_cat()['box_size'][iobj]
         jacobian = None  # for now
-
+        
         return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], row, col, stamp_size, jacobian)
+
 
     def get_exposure_info(self, iobj, icutout):
         """
