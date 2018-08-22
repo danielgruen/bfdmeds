@@ -247,11 +247,11 @@ class BFDMEDS(AstroMEDS):
         #tilename = tile_part[len(prefix):]
 
         # image_paths have new format:
-        #"/nfs/slac/des/fs1/g/sims/esheldon/DESDATA//meds/y3v02/DES0000+0209/nullwt-r/D00251776_r_c43_r2365p01_immasked_nullwt.fits"
+        #"/data/des61.a/data/severett/grid_empty_1gal_good_new/y3v02/balrog_images/0/DES0347-5540/nullwt-i/D00257627_i_c36_r2366p01_immasked_nullwt.fits"
         #parse into encoded pieces
-        tile_part_plus_exposure,band,ccd_part,request_attempt,not_important, not_important2 = image_path.split("_")
-        tilename=tile_part_plus_exposure.split("/")[12]
-        exposure=tile_part_plus_exposure.split("/")[-1]
+        path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12=image_path.split("/")
+        exposure,band,ccd_part,request_attempt,not_important, not_important2 = path12.split("_")
+        tilename=path10
 
         #Strip out the boilerplate
         ccd = ccd_part.lstrip("c")
