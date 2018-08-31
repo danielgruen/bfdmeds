@@ -204,14 +204,19 @@ class BFDMEDS(AstroMEDS):
         -------
         A numpy array containing the PSF image.
         """
-        info = self.get_exposure_info(iobj, icutout)
+        
         row = self['orig_row'][iobj][icutout]
         col = self['orig_col'][iobj][icutout]
 
         stamp_size = self.get_cat()['box_size'][iobj]
         jacobian = None  # for now
-        
-        return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], row, col, stamp_size, jacobian)
+
+        if icutout == 0:
+            info = self.get_coadd_exposure_info(iobj)
+            return self.psf_source.get_coadd_psf(info['tilename'], info['band'],info['ccd'], info['request_attempt'], row, col, stamp_size, jacobian)
+        else:
+            info = self.get_exposure_info(iobj, icutout)
+            return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], row, col, stamp_size, jacobian)
 
 
     def get_exposure_info(self, iobj, icutout):
@@ -259,6 +264,34 @@ class BFDMEDS(AstroMEDS):
 
         #Return info as dictionary
         info = dict(ccd=ccd, tilename=tilename, request_attempt=request_attempt, band=band, exposure=exposure)
+        return info
+
+    def get_coadd_exposure_info(self, iobj):
+        """
+        Get a selection of information about this exposure.
+
+        parameters
+        ----------
+        iobj:
+            Index of the object
+
+        returns
+        -------
+        A numpy array containing the PSF image.
+        """
+
+        #Get the source info and thence image path
+        info = self.get_source_info(iobj, 0)
+        image_path = info['image_path'] 
+        # image_paths have this format:
+        # coadd/SN-C3_C28_r3499p02_r.fits.fz 
+        # parse into encoded pieces
+        coadd,filename=image_path.split("/")
+        filename,fits,fz=filename.split(".")
+        tile,ccd,request_attempt,band=filename.split("_")
+
+        #Return info as dictionary
+        info = dict(ccd=ccd, tilename=tile, request_attempt=request_attempt, band=band)
         return info
 
 
