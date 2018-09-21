@@ -96,7 +96,7 @@ class PsfexSource(PsfSource):
         return data
 
 
-    def evaluate_psfex(self, psfex, x_image, y_image, nsidex=32, nsidey=32, upsampling=1, offset=None):
+    def evaluate_psfex(self, psfex, x_image, y_image, nsidex=32, nsidey=32, upsampling=1, offset=None,return_image=True):
         """Return an image of the PSFEx model of the PSF as a np array.
         Stolen from Barney Rowe many years ago
 
@@ -125,7 +125,10 @@ class PsfexSource(PsfSource):
         psf = psfex.getPSF(galsim.PositionD(x_image_galsim, y_image_galsim))
 
         psf.drawImage(image, scale=1.0/upsampling, offset=offset, method='no_pixel')
-        return image.array
+        if return_image:
+            return image.array
+        else:
+            return psf
 
 class PiffSource(PsfSource):
     """
@@ -223,7 +226,7 @@ class CollectedMedsPsfexSource(PsfexSource):
 
 
 
-    def get_psf(self, tilename, band, exposure, ccd, col, row, stamp_size, jacobian):
+    def get_psf(self, tilename, band, exposure, ccd, col, row, stamp_size, jacobian,return_image=True):
         """
         Get an image of the PSF for the given exposure and position
 
@@ -255,9 +258,14 @@ class CollectedMedsPsfexSource(PsfexSource):
         fits_filename = self._get_psfex_filename(tilename, band)
         hdu_name = "{0}_{1}_c{2}".format(exposure, band, ccd)
         psf_data = self._get_psf_data(fits_filename, hdu_name)
-        psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5))
+        if return_image:
+            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5),return_image=True)
+            return psf_image
+        else:
+            psf_obj = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5),return_image=False)
+            return psf_obj
         # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
-        return psf_image
+
 
 
 
@@ -289,7 +297,7 @@ class DirectoryPsfexSource(PsfexSource):
             raise TooManyPSFsError(pattern)
         return files[0]
 
-    def get_psf(self, tilename, band, exposure, ccd, col, row, stamp_size, jacobian):
+    def get_psf(self, tilename, band, exposure, ccd, col, row, stamp_size, jacobian,return_image=True):
         """
         Get an image of the PSF for the given exposure and position
 
@@ -320,11 +328,13 @@ class DirectoryPsfexSource(PsfexSource):
         fits_filename = self._get_psfex_filename(exposure, band, ccd)
         hdu_name = "PSF_DATA"
         psf_data = self._get_psf_data(fits_filename, hdu_name)
-        psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
-        # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
-        pdb.set_trace()
-        return psf_image
-
+        if return_image:
+            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
+            # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
+            return psf_image
+        else:
+            psf_obj = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5),return_image=False) 
+            return psf_obj, psf_data
 
 
 

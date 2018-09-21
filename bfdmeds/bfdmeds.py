@@ -13,7 +13,7 @@ import numpy as np
 import sys
 import collections
 from . import AstroMEDS
-
+import pdb
 class BFDMEDS(AstroMEDS):
 
 
@@ -187,6 +187,39 @@ class BFDMEDS(AstroMEDS):
             else:
                 return psf_list
 
+    def get_psfobj_list(self, iobj, skip_coadd=False):
+        """
+        Get a list of PSF postage stamp images for all cutouts associated with this
+        coadd object.
+
+        parameters
+        ----------
+        iobj:
+            Index of the object
+        psf_source:
+
+        skip_coadd:
+            if True, remove the coadd PSF from the list (default: False)
+
+
+        returns
+        -------
+        A list of PSF postage stamps.
+        """
+        if self.psf_source is not None:
+            ncutout=self._cat['ncutout'][iobj]
+            if skip_coadd:
+                return [self.get_psfobj(iobj, i) for i in xrange(1,ncutout)]
+            else:
+                return [self.get_psfobj(iobj, i) for i in xrange(0,ncutout)]
+        else:
+            ncut=self['ncutout'][iobj]
+            psf_list=[super(BFDMEDS,self).get_psf(iobj,icut) for icut in xrange(ncut)]
+            if skip_coadd:
+                return psf_list[1:]
+            else:
+                return psf_list
+
 
     def get_psf(self, iobj, icutout):
         """
@@ -212,6 +245,31 @@ class BFDMEDS(AstroMEDS):
         jacobian = None  # for now
         
         return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], row, col, stamp_size, jacobian)
+
+    def get_psfobj(self, iobj, icutout):
+        """
+        Get a a PSF image for a single exposure.
+
+        parameters
+        ----------
+        iobj:
+            Index of the object
+        icutout:
+            Index of the exposure.  Zero for coadd.
+
+
+        returns
+        -------
+        A numpy array containing the PSF image.
+        """
+        info = self.get_exposure_info(iobj, icutout)
+        row = self['orig_row'][iobj][icutout]
+        col = self['orig_col'][iobj][icutout]
+
+        stamp_size = self.get_cat()['box_size'][iobj]
+        jacobian = None  # for now
+        
+        return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], row, col, stamp_size, jacobian,return_image=False)
 
 
     def get_exposure_info(self, iobj, icutout):
@@ -248,10 +306,15 @@ class BFDMEDS(AstroMEDS):
 
         # image_paths have new format:
         #"/data/des61.a/data/severett/grid_empty_1gal_good_new/y3v02/balrog_images/0/DES0347-5540/nullwt-i/D00257627_i_c36_r2366p01_immasked_nullwt.fits"
+        #"/data/des71.a/data/kuropat/blank_test/DES0239+0126/y3v02/balrog_images/0/DES0239+0126/nullwt-i/D00251858_i_c36_r2365p01_immasked_nullwt.fits"
+        #"/data/des61.a/data/severett/grid_1gal_fd0/y3v02/balrog_images/0/DES0347-5540"
+
         #parse into encoded pieces
+        #path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12,path13,path14=image_path.split("/")
         path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12=image_path.split("/")
+
         exposure,band,ccd_part,request_attempt,not_important, not_important2 = path12.split("_")
-        tilename=path10
+        tilename=path12
 
         #Strip out the boilerplate
         ccd = ccd_part.lstrip("c")
