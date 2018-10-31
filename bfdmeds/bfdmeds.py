@@ -243,8 +243,8 @@ class BFDMEDS(AstroMEDS):
 
         stamp_size = self.get_cat()['box_size'][iobj]
         jacobian = None  # for now
-        
-        return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], row, col, stamp_size, jacobian)
+
+        return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian)
 
     def get_psfobj(self, iobj, icutout):
         """
@@ -269,7 +269,7 @@ class BFDMEDS(AstroMEDS):
         stamp_size = self.get_cat()['box_size'][iobj]
         jacobian = None  # for now
         
-        return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], row, col, stamp_size, jacobian,return_image=False)
+        return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian,return_image=False)
 
 
     def get_exposure_info(self, iobj, icutout):
@@ -308,13 +308,15 @@ class BFDMEDS(AstroMEDS):
         #"/data/des61.a/data/severett/grid_empty_1gal_good_new/y3v02/balrog_images/0/DES0347-5540/nullwt-i/D00257627_i_c36_r2366p01_immasked_nullwt.fits"
         #"/data/des71.a/data/kuropat/blank_test/DES0239+0126/y3v02/balrog_images/0/DES0239+0126/nullwt-i/D00251858_i_c36_r2365p01_immasked_nullwt.fits"
         #"/data/des61.a/data/severett/grid_1gal_fd0/y3v02/balrog_images/0/DES0347-5540"
-
+        
         #parse into encoded pieces
-        #path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12,path13,path14=image_path.split("/")
-        path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12=image_path.split("/")
-
-        exposure,band,ccd_part,request_attempt,not_important, not_important2 = path12.split("_")
+        path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12,path13,path14=image_path.split("/")
         tilename=path12
+        exposure,band,ccd_part,request_attempt,not_important, not_important2 = path14.split("_")
+        #path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12=image_path.split("/")
+        #tilename=path10
+        #exposure,band,ccd_part,request_attempt,not_important, not_important2 = path12.split("_")
+
 
         #Strip out the boilerplate
         ccd = ccd_part.lstrip("c")

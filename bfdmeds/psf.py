@@ -123,7 +123,7 @@ class PsfexSource(PsfSource):
         x_image_galsim = x_image+1
         y_image_galsim = y_image+1
         psf = psfex.getPSF(galsim.PositionD(x_image_galsim, y_image_galsim))
-
+        #psf_world = wcs.toWorld(psf)
         psf.drawImage(image, scale=1.0/upsampling, offset=offset, method='no_pixel')
         if return_image:
             return image.array
@@ -259,10 +259,11 @@ class CollectedMedsPsfexSource(PsfexSource):
         hdu_name = "{0}_{1}_c{2}".format(exposure, band, ccd)
         psf_data = self._get_psf_data(fits_filename, hdu_name)
         if return_image:
-            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5),return_image=True)
+ #           psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5),return_image=True)
+            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size,return_image=True)
             return psf_image
         else:
-            psf_obj = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5),return_image=False)
+            psf_obj = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size,return_image=False)
             return psf_obj
         # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
 
@@ -329,12 +330,13 @@ class DirectoryPsfexSource(PsfexSource):
         hdu_name = "PSF_DATA"
         psf_data = self._get_psf_data(fits_filename, hdu_name)
         if return_image:
-            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
+#            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
+            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size) 
             # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
             return psf_image
         else:
-            psf_obj = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5),return_image=False) 
-            return psf_obj, psf_data
+            psf_obj = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size,return_image=False) 
+            return psf_obj
 
 
 
