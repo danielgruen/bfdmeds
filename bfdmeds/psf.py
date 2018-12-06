@@ -9,7 +9,7 @@ import collections
 import galsim
 import galsim.des
 import astropy.io.fits
-import pdb
+
 class PsfSource(object):
     """
     A Base class representing sources of PSF information.
@@ -298,6 +298,15 @@ class DirectoryPsfexSource(PsfexSource):
             raise TooManyPSFsError(pattern)
         return files[0]
 
+    def _get_psfex_coadd_filename(self, tilename, ccd,  request_attempt, band):
+        pattern = "{0}/{1}_{2}_{3}_{4}_psfcat.psf".format(self.directory, tilename, ccd, request_attempt, band)
+        files = glob.glob(pattern)
+        if len(files)==0:
+            raise MissingPSFError(pattern)
+        elif len(files)>1:
+            raise TooManyPSFsError(pattern)
+        return files[0]
+
     def get_psf(self, tilename, band, exposure, ccd, col, row, stamp_size, jacobian,return_image=True):
         """
         Get an image of the PSF for the given exposure and position
@@ -329,6 +338,7 @@ class DirectoryPsfexSource(PsfexSource):
         fits_filename = self._get_psfex_filename(exposure, band, ccd)
         hdu_name = "PSF_DATA"
         psf_data = self._get_psf_data(fits_filename, hdu_name)
+
         if return_image:
 #            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
             psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size) 
@@ -337,6 +347,49 @@ class DirectoryPsfexSource(PsfexSource):
         else:
             psf_obj = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size,return_image=False) 
             return psf_obj
+
+
+    def get_coadd_psf(self, tilename, band, ccd, request_attempt, col, row, stamp_size, jacobian,return_image=True):
+        """
+        Get an image of the PSF for the given exposure and position
+
+        Parameters
+        ----------
+        tilename:
+            string, Identifier for the tile, currently unused
+        band:
+            string, Identifier for the band, used to find correct PSF
+        exposure:
+            string, Identifier for the exposure
+        ccd:
+            string or int, Identifier for the chip
+        col:
+            integer in MEDS indexing of the chip column to evaluate at
+        row:
+            integer in MEDS indexing of the chip row to evaluate at
+        stamp_size:
+            integer size of the psf image to return in pixels. Since PSFEx models
+            are stored in pixel space this implies a relative resolution
+        jacobian:
+            unused for now
+
+        Returns:
+            A numpy stamp_size x stamp_size image of the PSF
+
+        """
+        fits_filename = self._get_psfex_coadd_filename(tilename, ccd,  request_attempt, band)
+        hdu_name = "PSF_DATA"
+        psf_data = self._get_psf_data(fits_filename, hdu_name)
+        if return_image:
+#            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
+            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size) 
+            # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
+            return psf_image
+        else:
+            psf_obj = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size,return_image=False) 
+            return psf_obj
+
+        return psf_image
 
 
 
