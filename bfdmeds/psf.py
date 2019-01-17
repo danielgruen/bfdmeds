@@ -210,7 +210,6 @@ class CollectedMedsPsfexSource(PsfexSource):
         for a given tilename and band, e.g. /path/to/psfs/{tilename}_{band}.fits
 
     """
-
     def __init__(self, template, cache_size=25):
         super(CollectedMedsPsfexSource, self).__init__(cache_size)
         self.template = template
@@ -254,7 +253,6 @@ class CollectedMedsPsfexSource(PsfexSource):
             A numpy stamp_size x stamp_size image of the PSF
 
         """
-
         fits_filename = self._get_psfex_filename(tilename, band)
         hdu_name = "{0}_{1}_c{2}".format(exposure, band, ccd)
         psf_data = self._get_psf_data(fits_filename, hdu_name)
