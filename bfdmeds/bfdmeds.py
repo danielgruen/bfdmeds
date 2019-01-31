@@ -17,7 +17,7 @@ import pdb
 class BFDMEDS(AstroMEDS):
 
 
-    def __init__(self, filename, psf_source=None, astro_file=None, filename_mofsub=None, filename_mofsub_badfill=None):
+    def __init__(self, filename, psf_source=None, astro_dir=None, color_array=None, filename_mofsub=None, filename_mofsub_badfill=None):
         """
         Build a BFDMEDS object from three MEDS files: the standard one, one with 
         MOF-neighbors subtracted, and one with MOF neighbors subtracted and bad pixels
@@ -39,9 +39,8 @@ class BFDMEDS(AstroMEDS):
         fiename_mofsub_badfill:
             MEDS filename, MOF neighbor models subtracted and bad pixels filled
         """
-    
-    
-        super(BFDMEDS, self).__init__(filename)        
+
+        super(BFDMEDS, self).__init__(filename, astro_dir=astro_dir, color_array=color_array)        
         
         self.psf_source = psf_source
 
@@ -245,8 +244,10 @@ class BFDMEDS(AstroMEDS):
         jacobian = None  # for now
 
         if icutout == 0:
-            return self.psf_source.get_coadd_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], info['request_attempt'],col, row, stamp_size, jacobian)
+            info = self.get_coadd_exposure_info(iobj)
+            return self.psf_source.get_coadd_psf(info['tilename'], info['band'], info['ccd'], info['request_attempt'],col, row, stamp_size, jacobian)
         else:
+            info = self.get_exposure_info(iobj, icutout)
             return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian)
             
 
@@ -266,13 +267,12 @@ class BFDMEDS(AstroMEDS):
         -------
         A numpy array containing the PSF image.
         """
-        info = self.get_exposure_info(iobj, icutout)
         row = self['orig_row'][iobj][icutout]
         col = self['orig_col'][iobj][icutout]
 
         stamp_size = self.get_cat()['box_size'][iobj]
         jacobian = None  # for now
-        
+
         if icutout == 0:
             info = self.get_coadd_exposure_info(iobj)
             return self.psf_source.get_coadd_psf(info['tilename'], info['band'],info['ccd'], info['request_attempt'], col, row, stamp_size, jacobian,return_image=False)
@@ -304,37 +304,18 @@ class BFDMEDS(AstroMEDS):
         #Get the source info and thence image path
         info = self.get_source_info(iobj, icutout)
         image_path = info['image_path'] 
+
         # image_paths have this format:
         #"nwgint/DES2348-5831_r2590p01_D00350178_r_c03_nwgint.fits"
         # we parse it into the pieces it encodes:
-        #tile_part, request_attempt, exposure, band, ccd_part, _ = image_path.split("_")
-
-        #Strip out the boilerplate
-        #ccd = ccd_part.lstrip("c")
-        #prefix = "nwgint/"
-        #tilename = tile_part[len(prefix):]
-
-        # image_paths have new format:
-        #"/data/des61.a/data/severett/grid_empty_1gal_good_new/y3v02/balrog_images/0/DES0347-5540/nullwt-i/D00257627_i_c36_r2366p01_immasked_nullwt.fits"
-        #"/data/des71.a/data/kuropat/blank_test/DES0239+0126/y3v02/balrog_images/0/DES0239+0126/nullwt-i/D00251858_i_c36_r2365p01_immasked_nullwt.fits"
-        #"/data/des61.a/data/severett/grid_1gal_fd0/y3v02/balrog_images/0/DES0347-5540"
-
-        #parse into encoded pieces
-        #path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12,path13,path14=image_path.split("/")
-        #tilename=path12
-        #exposure,band,ccd_part,request_attempt,not_important, not_important2 = path14.split("_")
-        #parse into encoded pieces
-        path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12,path13,path14,path15=image_path.split("/")
-        tilename=path13
-        exposure,band,ccd_part,request_attempt,not_important, not_important2 = path15.split("_")
-        #path1,path2,path3,path4,path5,path6,path7,path8,path9,path10,path11,path12=image_path.split("/")
-        #tilename=path10
-        #exposure,band,ccd_part,request_attempt,not_important, not_important2 = path12.split("_")
-
+        path=image_path.split("/")
+        filename=path[-1]
+        tilename=path[12]
+        
+        exposure, band, ccd_part, request_attempt, _, _ = filename.split("_")
 
         #Strip out the boilerplate
         ccd = ccd_part.lstrip("c")
-
 
         #Return info as dictionary
         info = dict(ccd=ccd, tilename=tilename, request_attempt=request_attempt, band=band, exposure=exposure)
@@ -361,7 +342,7 @@ class BFDMEDS(AstroMEDS):
         # coadd/SN-C3_C28_r3499p02_r.fits.fz 
         # parse into encoded pieces
         coadd,filename=image_path.split("/")
-        filename,fits,fz=filename.split(".")
+        filename,fits=filename.split(".")
         tile,ccd,request_attempt,band=filename.split("_")
 
         #Return info as dictionary
@@ -386,7 +367,7 @@ class BFDMEDS(AstroMEDS):
         skip_coadd:
             if True, remove the coadd jacobian from the list (default: False)
         """
-        
+
         if(skip_coadd==True):
             return super(BFDMEDS, self).get_jacobian_list(iobj)[1:]
         
