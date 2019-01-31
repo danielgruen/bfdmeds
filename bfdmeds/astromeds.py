@@ -3,7 +3,7 @@
 # map for the cutout 0, which is always the coadd cutout.
 
 import meds
-from pixmappy import PixelMapCollection
+from pixmappy import DESMaps
 import numpy as np
 import re
 import astropy.coordinates as co
@@ -22,7 +22,7 @@ detpos  =  {1:'S29' , 2:'S30', 3:'S31', 4 :'S25', 5 :'S26', 6 :'S27',
             61:'N30', 62:'N31'}
 
 class AstroMEDS(meds.MEDS):
-    def __init__(self, meds_file, astro_file=None):
+    def __init__(self, meds_file, astro_dir=None,color_array=None):
         """
         Create MEDS file wrapped by new astrometry.
 
@@ -35,11 +35,17 @@ class AstroMEDS(meds.MEDS):
             keep using astrometry in the MEDS file
         """
         super(AstroMEDS, self).__init__(meds_file)
-        if astro_file is None:
-            self.pmc = None
+
+        if astro_dir is None:
+            self.maps = None
         else:
-            self.pmc = PixelMapCollection(astro_file)
-        self.color = 0.5 # ??? Nominal color given to all WCS's
+            self.maps = DESMaps(use_pkl=False)
+        if color_array is None:
+            self.color = np.ones(len(self['id'])) # ??? Nominal color given to all WCS's
+        else:
+            if len(color_array) != len(self['id']):
+                raise Exception("color array given does not match size of meds file")
+            self.color=color_array
         self.step = 5    # Step size (in pixels) used for Jacobian calcs
 
     def _get_wcs(self, file_id):
@@ -52,11 +58,8 @@ class AstroMEDS(meds.MEDS):
             return None
         expnum = int(matches.group(1))
         ccdnum = int(matches.group(2))
-        if ccdnum not in detpos:
-            print 'Error interpreting ccdnum', ccdnum
-            return None
-        wcsname = 'D{:06d}/{:s}'.format(expnum,detpos[ccdnum])
-        return self.pmc.getWCS(wcsname)
+
+        return self.maps.getDESWCS(expnum,ccdnum)
 
     def _old_orig_rowcol(self,iobj,icutout):
         # MEDS will eventually have a get_orig_rowcol() method, but doesn't
@@ -98,7 +101,7 @@ class AstroMEDS(meds.MEDS):
         # Old value is guess for solver for new one. Swap rowcol order for xy
         guessxy = np.array( [old_rowcol[1], old_rowcol[0]])
         # Now solve.
-        xy = wcs.toPix(posn, c=self.color, guess=guessxy)
+        xy = wcs.toPix(ra,dec, c=self.color[iobj], guess=guessxy)
         return xy[1],xy[0]   # rowcol is reversed order
 
     def get_cutout_rowcol(self,iobj, icutout):
@@ -117,7 +120,7 @@ class AstroMEDS(meds.MEDS):
         -------
         row,col the location in the cutout image
         """
-        if icutout==0 or self.pmc is None:
+        if icutout==0 or self.maps is None:
             # Use old version for coadd cutout
             return super(AstroMEDS,self).get_cutout_rowcol(iobj,icutout)
         # Subtract cutout corner from original coordinates to get cutout coords
@@ -126,7 +129,7 @@ class AstroMEDS(meds.MEDS):
                col - self['orig_start_col'][iobj][icutout]
 
     def get_coutout_rowcol_list(self,iobj):
-        if self.pmc is None:
+        if self.maps is None:
             return super(AstroMEDS,self).get_cutout_rowcol_list(iobj)
         ra,dec = self['ra'][iobj],self['dec'][iobj]
         posn = co.SkyCoord(ra, dec, unit='deg',frame='icrs')
@@ -141,7 +144,7 @@ class AstroMEDS(meds.MEDS):
         for i,f in enumerate(file_id):
             guessxy=np.array((oldcol[i],oldrow[i]))
             wcs = self._get_wcs(f)
-            xy = wcs.toPix(posn, c=self.color, guess=guessxy)
+            xy = wcs.toPix(ra,dec, c=self.color[iobj], guess=guessxy)
             out.append((xy[1] - row0[i],xy[0]-col0[i])) # "rowcol" is reverse of "xy"
         return out
 
@@ -165,28 +168,28 @@ class AstroMEDS(meds.MEDS):
         icutout:
             Index of the cutout for this object.
         """
-        if icutout==0 or self.pmc is None:
+        if icutout==0 or self.maps is None:
             # No change for coadd cutout:
             return super(AstroMEDS,self).get_jacobian(iobj,icutout)
-        
+
         # Get old position as guess at new one
         old_rowcol = self._old_orig_rowcol(iobj,icutout)
         ra,dec = self['ra'][iobj],self['dec'][iobj]
         posn = co.SkyCoord(ra, dec, unit='deg',frame='icrs')
         file_id = self.get_image_info()['image_path'][self['file_id'][iobj][icutout]]
         wcs = self._get_wcs(file_id)
-        
+
         # Old value is guess for solver for new one. Swap rowcol order for xy
         guessxy = np.array( [old_rowcol[1], old_rowcol[0]])
         # Now solve.
-        xy = wcs.toPix(posn, c=self.color, guess=guessxy)
+        xnew,ynew = wcs.toPix(ra,dec, c=self.color[iobj], guess=guessxy)
         # And get Jacobian
-        jac = wcs.jacobian(xy, c=self.color, step=self.step)
+        jac = wcs.jacobian(xnew,ynew, c=self.color[iobj], step=self.step)
         # Convert sky units from degrees to arcsec
         jac *= 3600.
-        
-        result = {'row0':(xy[1] - self['orig_start_row'][iobj][icutout]),
-                  'col0':(xy[0] - self['orig_start_col'][iobj][icutout]),
+
+        result = {'row0':(ynew - self['orig_start_row'][iobj][icutout]),
+                  'col0':(xnew - self['orig_start_col'][iobj][icutout]),
                   'dudrow':-jac[0][1],
                   'dvdrow':jac[1][1],
                   'dudcol':-jac[0][0],
@@ -212,7 +215,7 @@ class AstroMEDS(meds.MEDS):
             dudrow dudcol
             dvdrow dvdcol
         """
-        if icutout==0 or self.pmc is None:
+        if icutout==0 or self.maps is None:
             # No change for coadd cutout:
             return super(AstroMEDS,self).get_jacobian_matrix(iobj,icutout)
         
@@ -221,10 +224,11 @@ class AstroMEDS(meds.MEDS):
                           [d['dvdrow'], d['dvdcol']] )
         
     def get_jacobian_list(self,iobj):
-        if self.pmc is None:
+
+        if self.maps is None:
             return super(AstroMEDS,self).get_jacobian_list(iobj)
         nstamps = self['ncutout'][iobj]
-        return [self.get_jacobian(iobj,icutout) for icoutout in range(nstamps)]
+        return [self.get_jacobian(iobj,icutout) for icutout in range(nstamps)]
     
 
         
