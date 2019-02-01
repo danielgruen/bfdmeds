@@ -13,7 +13,7 @@ import numpy as np
 import sys
 import collections
 from . import AstroMEDS
-import pdb
+
 class BFDMEDS(AstroMEDS):
 
 
@@ -278,7 +278,7 @@ class BFDMEDS(AstroMEDS):
             return self.psf_source.get_coadd_psf(info['tilename'], info['band'],info['ccd'], info['request_attempt'], col, row, stamp_size, jacobian,return_image=False)
         else:
             info = self.get_exposure_info(iobj, icutout)
-            return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian,return_image=False)
+            return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian, return_image=False)
 
 
 
