@@ -186,39 +186,6 @@ class BFDMEDS(AstroMEDS):
             else:
                 return psf_list
 
-    def get_psfobj_list(self, iobj, skip_coadd=False):
-        """
-        Get a list of PSF postage stamp images for all cutouts associated with this
-        coadd object.
-
-        parameters
-        ----------
-        iobj:
-            Index of the object
-        psf_source:
-
-        skip_coadd:
-            if True, remove the coadd PSF from the list (default: False)
-
-
-        returns
-        -------
-        A list of PSF postage stamps.
-        """
-        if self.psf_source is not None:
-            ncutout=self._cat['ncutout'][iobj]
-            if skip_coadd:
-                return [self.get_psfobj(iobj, i) for i in xrange(1,ncutout)]
-            else:
-                return [self.get_psfobj(iobj, i) for i in xrange(0,ncutout)]
-        else:
-            ncut=self['ncutout'][iobj]
-            psf_list=[super(BFDMEDS,self).get_psf(iobj,icut) for icut in xrange(ncut)]
-            if skip_coadd:
-                return psf_list[1:]
-            else:
-                return psf_list
-
 
     def get_psf(self, iobj, icutout):
         """
@@ -241,44 +208,16 @@ class BFDMEDS(AstroMEDS):
         col = self['orig_col'][iobj][icutout]
 
         stamp_size = self.get_cat()['box_size'][iobj]
-        jacobian = None  # for now
+        jacobian = self.get_jacobian(iobj,icutout)
 
         if icutout == 0:
             info = self.get_coadd_exposure_info(iobj)
             return self.psf_source.get_coadd_psf(info['tilename'], info['band'], info['ccd'], info['request_attempt'],col, row, stamp_size, jacobian)
+ 
         else:
             info = self.get_exposure_info(iobj, icutout)
             return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian)
             
-
-    def get_psfobj(self, iobj, icutout):
-        """
-        Get a a PSF image for a single exposure.
-
-        parameters
-        ----------
-        iobj:
-            Index of the object
-        icutout:
-            Index of the exposure.  Zero for coadd.
-
-
-        returns
-        -------
-        A numpy array containing the PSF image.
-        """
-        row = self['orig_row'][iobj][icutout]
-        col = self['orig_col'][iobj][icutout]
-
-        stamp_size = self.get_cat()['box_size'][iobj]
-        jacobian = None  # for now
-
-        if icutout == 0:
-            info = self.get_coadd_exposure_info(iobj)
-            return self.psf_source.get_coadd_psf(info['tilename'], info['band'],info['ccd'], info['request_attempt'], col, row, stamp_size, jacobian,return_image=False)
-        else:
-            info = self.get_exposure_info(iobj, icutout)
-            return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian, return_image=False)
 
 
 
@@ -352,9 +291,6 @@ class BFDMEDS(AstroMEDS):
 
 
 
-
-
-     
     def get_jacobian_list(self, iobj, skip_coadd=False):
         """
         Get the list of jacobians for all cutouts

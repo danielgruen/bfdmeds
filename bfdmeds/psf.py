@@ -101,7 +101,7 @@ class PsfInfoSource(PsfSource):
         return data
 
 
-    def evaluate_psf(self, psfdata, x_image, y_image, nsidex=32, nsidey=32, upsampling=1, offset=None,return_image=True):
+    def evaluate_psf(self, psfdata, x_image, y_image, nsidex=32, nsidey=32, upsampling=1, jacobian=None, offset=None):
         """Return an image of the Piff or PSFEx model of the PSF as a np array.
         Stolen from Barney Rowe many years ago
 
@@ -123,6 +123,9 @@ class PsfInfoSource(PsfSource):
         """
         import galsim
         image = galsim.ImageD(nsidex, nsidey)
+        if jacobian is not None:
+            wcs=galsim.AffineTransform(jacobian['dudcol'],jacobian['dudrow'],jacobian['dvdcol'],jacobian['dvdrow'],origin=galsim.PositionD(jacobian['col0'],jacobian['row0']),world_origin=galsim.PositionD(0,0))
+            image.wcs=wcs
 
         #Note galsim uses 1-offset convention whereas coordinates in meds file are 0-offset:
         x_image_galsim = x_image+1
@@ -130,15 +133,15 @@ class PsfInfoSource(PsfSource):
 
         if self.psf_type == 'psfex':
             psf = psfdata.getPSF(galsim.PositionD(x_image_galsim, y_image_galsim))
-            #psf_world = wcs.toWorld(psf)
-            psf.drawImage(image, scale=1.0/upsampling, offset=offset, method='no_pixel')
+            psf_world=wcs.toWorld(psf)
+            psf_world.drawImage(image, scale=1.0/upsampling, offset=offset, method='no_pixel')
+
         if self.psf_type == 'piff':
-            im = psfdata.draw(x=x_image_galsim, y=y_image_galsim, image=image)
-            psf=0
-        if return_image:
-            return image.array
-        else:
-            return psf
+            psfdata.draw(x=x_image_galsim, y=y_image_galsim, image=image)
+
+            
+        return image.array
+
 
 '''
 class CollectedMedsPsfexSource(PsfexSource):
@@ -258,7 +261,7 @@ class DirectoryPsfInfoSource(PsfInfoSource):
             raise TooManyPSFsError(pattern)
         return files[0]
 
-    def get_psf(self, tilename, band, exposure, ccd, col, row, stamp_size, jacobian,return_image=True):
+    def get_psf(self, tilename, band, exposure, ccd, col, row, stamp_size, jacobian):
         """
         Get an image of the PSF for the given exposure and position
 
@@ -290,17 +293,13 @@ class DirectoryPsfInfoSource(PsfInfoSource):
         hdu_name = "PSF_DATA"
         psf_data = self._get_psf_data(fits_filename, hdu_name)
 
-        if return_image:
-#            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
-            psf_image = self.evaluate_psf(psf_data, col, row, stamp_size, stamp_size) 
-            # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
-            return psf_image
-        else:
-            psf_obj = self.evaluate_psf(psf_data, col, row, stamp_size, stamp_size,return_image=False) 
-            return psf_obj
+        psf_image = self.evaluate_psf(psf_data, col, row, nsidex=stamp_size, nsidey=stamp_size,jacobian=jacobian) 
+
+        return psf_image
 
 
-    def get_coadd_psf(self, tilename, band, ccd, request_attempt, col, row, stamp_size, jacobian,return_image=True):
+
+    def get_coadd_psf(self, tilename, band, ccd, request_attempt, col, row, stamp_size, jacobian):
         """
         Get an image of the PSF for the given exposure and position
 
@@ -331,15 +330,10 @@ class DirectoryPsfInfoSource(PsfInfoSource):
         fits_filename = self._get_psfex_coadd_filename(tilename, ccd,  request_attempt, band)
         hdu_name = "PSF_DATA"
         psf_data = self._get_psf_data(fits_filename, hdu_name)
-        if return_image:
-#            psf_image = self.evaluate_psfex(psf_data, col, row, stamp_size, stamp_size, offset=(0.5,0.5)) 
-            psf_image = self.evaluate_psf(psf_data, col, row, stamp_size, stamp_size) 
-            # offset so central pixel is (stamp_size/2,stamp_size/2) when starting at 0
-            return psf_image
-        else:
-            psf_obj = self.evaluate_psf(psf_data, col, row, stamp_size, stamp_size,return_image=False) 
-            return psf_obj
 
+        psf_image = self.evaluate_psf(psf_data, col, row, nsidex=stamp_size, nsidey=stamp_size, jacobian=jacobian) 
         return psf_image
+
+
 
 
