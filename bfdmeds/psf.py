@@ -126,7 +126,7 @@ class PsfInfoSource(PsfSource):
         if jacobian is not None:
             wcs=galsim.AffineTransform(jacobian['dudcol'],jacobian['dudrow'],jacobian['dvdcol'],jacobian['dvdrow'],origin=galsim.PositionD(jacobian['col0'],jacobian['row0']),world_origin=galsim.PositionD(0,0))
 
-
+        # setup image with desired wcs of postage stamp
         image = galsim.ImageD(nsidex, nsidey,wcs=wcs)
 
         #Note galsim uses 1-offset convention whereas coordinates in meds file are 0-offset:
@@ -134,12 +134,14 @@ class PsfInfoSource(PsfSource):
         y_image_galsim = y_image+1
 
         if self.psf_type == 'psfex':
+            # draw psf in correct WCS to image
             psf = psfdata.getPSF(galsim.PositionD(x_image_galsim, y_image_galsim))
             psf_world=wcs.toWorld(psf)
             psf_world.drawImage(image, offset=offset, method='no_pixel')
 
         if self.psf_type == 'piff':
-            psfdata.draw(x=x_image_galsim, y=y_image_galsim, image=image)
+            # draw psf to image with desired WCS
+            image=psfdata.draw(x=x_image_galsim, y=y_image_galsim, image=image)
             psf_world=psfdata
 
         if return_psf_object:

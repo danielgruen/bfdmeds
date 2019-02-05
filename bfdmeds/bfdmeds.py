@@ -7,7 +7,7 @@ TODO: implement the getters properly
 TODO: figure out at which point we determine which exposures to cull (because of masking / non-white noise) and how that culling happens
 
 """
-import pdb
+
 import meds
 import numpy as np
 import sys
