@@ -7,7 +7,7 @@ TODO: implement the getters properly
 TODO: figure out at which point we determine which exposures to cull (because of masking / non-white noise) and how that culling happens
 
 """
-
+import pdb
 import meds
 import numpy as np
 import sys
@@ -153,7 +153,7 @@ class BFDMEDS(AstroMEDS):
         return rowlist, collist
 
 
-    def get_psf_list(self, iobj, skip_coadd=False):
+    def get_psf_list(self, iobj, skip_coadd=False,return_psf_object=False):
         """
         Get a list of PSF postage stamp images for all cutouts associated with this
         coadd object.
@@ -174,10 +174,12 @@ class BFDMEDS(AstroMEDS):
         """
         if self.psf_source is not None:
             ncutout=self._cat['ncutout'][iobj]
+            # make elegant to get coadd if needed
+            
             if skip_coadd:
-                return [self.get_psf(iobj, i) for i in xrange(1,ncutout)]
+                return [self.get_psf(iobj, i, return_psf_object=return_psf_object) for i in xrange(1,ncutout)]
             else:
-                return [self.get_psf(iobj, i) for i in xrange(0,ncutout)]
+                return [self.get_psf(iobj, i, return_psf_object=return_psf_object) for i in xrange(0,ncutout)]
         else:
             ncut=self['ncutout'][iobj]
             psf_list=[super(BFDMEDS,self).get_psf(iobj,icut) for icut in xrange(ncut)]
@@ -187,7 +189,7 @@ class BFDMEDS(AstroMEDS):
                 return psf_list
 
 
-    def get_psf(self, iobj, icutout):
+    def get_psf(self, iobj, icutout,return_psf_object=False):
         """
         Get a a PSF image for a single exposure.
 
@@ -212,11 +214,11 @@ class BFDMEDS(AstroMEDS):
 
         if icutout == 0:
             info = self.get_coadd_exposure_info(iobj)
-            return self.psf_source.get_coadd_psf(info['tilename'], info['band'], info['ccd'], info['request_attempt'],col, row, stamp_size, jacobian)
+            return self.psf_source.get_coadd_psf(info['tilename'], info['band'], info['ccd'], info['request_attempt'],col, row, stamp_size, jacobian,return_psf_object=return_psf_object)
  
         else:
             info = self.get_exposure_info(iobj, icutout)
-            return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian)
+            return self.psf_source.get_psf(info['tilename'], info['band'], info['exposure'], info['ccd'], col, row, stamp_size, jacobian,return_psf_object=return_psf_object)
             
 
 
@@ -244,14 +246,18 @@ class BFDMEDS(AstroMEDS):
         info = self.get_source_info(iobj, icutout)
         image_path = info['image_path'] 
 
-        # image_paths have this format:
-        #"nwgint/DES2348-5831_r2590p01_D00350178_r_c03_nwgint.fits"
-        # we parse it into the pieces it encodes:
-        path=image_path.split("/")
-        filename=path[-1]
-        tilename=path[12]
-        
-        exposure, band, ccd_part, request_attempt, _, _ = filename.split("_")
+        # trying to code this more foolproof
+        tilename_start_index=image_path.find("DES")
+        tilename=image_path[tilename_start_index:tilename_start_index+12]
+        exposure_start_index=image_path.find("D00")
+        exposure=image_path[exposure_start_index:exposure_start_index+9]
+        band=image_path[exposure_start_index+10]
+        ccd_part=image_path[exposure_start_index+12:exposure_start_index+15]
+        request_attempt=image_path[exposure_start_index+16:exposure_start_index+24]
+
+        #filename=path[-1]
+        #tilename=path[12]        
+        #exposure, band, ccd_part, request_attempt, _, _ = filename.split("_")
 
         #Strip out the boilerplate
         ccd = ccd_part.lstrip("c")
@@ -273,10 +279,14 @@ class BFDMEDS(AstroMEDS):
         -------
         A numpy array containing the PSF image.
         """
-
+        # fix this for supernova fields vs. regular wide fields
         #Get the source info and thence image path
         info = self.get_source_info(iobj, 0)
         image_path = info['image_path'] 
+
+        tile_start_index=image_path.find("DES")
+        tilename=image_path[tile_start_index:tile_start_index+12]
+        
         # image_paths have this format:
         # coadd/SN-C3_C28_r3499p02_r.fits.fz 
         # parse into encoded pieces
@@ -285,7 +295,7 @@ class BFDMEDS(AstroMEDS):
         tile,ccd,request_attempt,band=filename.split("_")
 
         #Return info as dictionary
-        info = dict(ccd=ccd, tilename=tile, request_attempt=request_attempt, band=band)
+        info = dict(ccd=ccd, tilename=tilename, request_attempt=request_attempt, band=band)
         return info
 
 
