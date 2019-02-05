@@ -13,7 +13,7 @@ import numpy as np
 import sys
 import collections
 from . import AstroMEDS
-
+import pdb
 class BFDMEDS(AstroMEDS):
 
 
@@ -241,19 +241,21 @@ class BFDMEDS(AstroMEDS):
         """
         if icutout==0:
             raise ValueError("MEDS.get_exposure_info requires icutout>0 (no information available for coadds)")
+        
+        # tilename is in filename
+        filename=self._filename
+        tilename_start_index=filename.find("DES")
+        tilename=filename[tilename_start_index:tilename_start_index+12]
 
-        #Get the source info and thence image path
+        #Get the source info and thence image info
         info = self.get_source_info(iobj, icutout)
-        image_path = info['image_path'] 
-
-        # trying to code this more foolproof
-        tilename_start_index=image_path.find("DES")
-        tilename=image_path[tilename_start_index:tilename_start_index+12]
-        exposure_start_index=image_path.find("D00")
-        exposure=image_path[exposure_start_index:exposure_start_index+9]
-        band=image_path[exposure_start_index+10]
-        ccd_part=image_path[exposure_start_index+12:exposure_start_index+15]
-        request_attempt=image_path[exposure_start_index+16:exposure_start_index+24]
+        # image_id is just the image name
+        image_id=info['image_id']
+        image_id_info=image_id.split("_")
+        exposure=image_id_info[0]
+        band=image_id_info[1]
+        ccd_part=image_id_info[2]
+        request_attempt=image_id_info[3]
 
         #filename=path[-1]
         #tilename=path[12]        
@@ -283,19 +285,19 @@ class BFDMEDS(AstroMEDS):
         #Get the source info and thence image path
         info = self.get_source_info(iobj, 0)
         image_path = info['image_path'] 
+        image_id=info['image_id']
 
-        tile_start_index=image_path.find("DES")
-        tilename=image_path[tile_start_index:tile_start_index+12]
-        
         # image_paths have this format:
         # coadd/SN-C3_C28_r3499p02_r.fits.fz 
         # parse into encoded pieces
-        coadd,filename=image_path.split("/")
-        filename,fits=filename.split(".")
-        tile,ccd,request_attempt,band=filename.split("_")
+        filename=image_id.split("_")
+        tile=filename[0]
+        ccd=filename[1]
+        request_attempt=filename[2]
+        band=filename[3].split(".")[0]
 
         #Return info as dictionary
-        info = dict(ccd=ccd, tilename=tilename, request_attempt=request_attempt, band=band)
+        info = dict(ccd=ccd, tilename=tile, request_attempt=request_attempt, band=band)
         return info
 
 
