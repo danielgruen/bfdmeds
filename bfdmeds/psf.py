@@ -9,8 +9,10 @@ import collections
 import galsim
 import galsim.des
 import astropy.io.fits
-import piff
-
+try:
+    import piff
+except:
+    print("piff not found, must install if using piff psfs")
 class PsfSource(object):
     """
     A Base class representing sources of PSF information.

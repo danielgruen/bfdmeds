@@ -3,7 +3,10 @@
 # map for the cutout 0, which is always the coadd cutout.
 
 import meds
-from pixmappy import DESMaps
+try:
+    from pixmappy import DESMaps
+except:
+    print("pixmappy not found, must install if using pixmappy")
 import numpy as np
 import re
 import astropy.coordinates as co
